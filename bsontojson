@@ -1,0 +1,44 @@
+import re
+
+def bsontojson(bsondata):
+    jsondata = bsondata.replace("\\", "")  # dunno if need for all. for jsondecode error
+
+    jsondata = jsondata.replace(" False,", ' "False",').replace(" True,", ' "True",').replace(" True}",
+                                                                                              ' "True"}').replace(
+        " False}", ' "False"}').replace(": None", ': "None"')
+
+    jsondata = re.sub(r'\'(?=([^"]*"[^"]*")*[^"]*$)', '"',
+                      jsondata)  # sub all single quotes unless inside double quotes
+
+    jsondata = re.sub(r'ObjectId\s*\(\s*\"(\S+)\"\s*\)',
+                      r'{"$oid": "\1"}',
+                      jsondata)
+    jsondata = re.sub(r'Date\s*\(\s*(\S+)\s*\)',
+                      r'{"$data1": "\1"}',
+                      jsondata)
+
+    jsondata = re.sub(r'ISODate\s*\(\s*(\S+)\s*\)',
+                      r'{"$date": \1}',
+                      jsondata)
+
+    jsondata = re.sub(r'datetime.datetime(.*?)\)',
+                      r'{"$data3": "\1)"}',
+                      jsondata)
+
+    dreg = re.compile(r"(?<=\"\$data3\":)[\s\"\(](.*?)\)")
+
+    dates = dreg.findall(jsondata)
+    for x in dates:
+        y = [int(x.strip('"(')) for x in x.split(",")]
+        newdate = datetime(*y)
+        newdate = newdate.strftime("%m/%d/%Y")
+        jsondata = jsondata.replace(x + ")", '"' + newdate)
+
+    jsondata = re.sub(r'NumberLong\s*\(\s*(\S+)\s*\)',
+                      r'{"$num3": \1}',
+                      jsondata)
+
+    jsondata = re.sub(r'NumberInt\s*\(\s*(\S+)\s*\)',
+                      r'{"$numberInt": "\1"}',
+                      jsondata)
+    return jsondata
